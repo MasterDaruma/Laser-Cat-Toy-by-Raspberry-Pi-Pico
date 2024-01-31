@@ -2,6 +2,8 @@
 
 A Raspberry Pi-based toy designed to entertain cats.
 
+I usd MicroPython to program it.
+
 It offers a fun and stimulating gaming experience that also encourages physical activity, promoting health and activity.
 
 Simply connect it to a 5V charger and enjoy.
