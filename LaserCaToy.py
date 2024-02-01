@@ -4,44 +4,34 @@ import urandom
 
 def init_servo(pin):
     servo = PWM(Pin(pin))
-    servo.freq(50)  # 设置PWM频率为50Hz，适合大多数舵机。
+    servo.freq(50)
     return servo
 
 def set_servo_angle(servo, angle):
     duty = int(((angle / 180) * (6553 - 2457)) + 2457)
     servo.duty_u16(duty)
 
-def smooth_move(servo, current_angle, target_angle, steps=10):
-    step_angle = (target_angle - current_angle) / steps
-    for _ in range(steps):
-        current_angle += step_angle
-        set_servo_angle(servo, current_angle)
-        sleep(0.02)  # 短暂延时以实现平滑移动
+def calculate_new_angle(current_angle, velocity, angle_range):
+    new_angle = current_angle + velocity
+    if new_angle < angle_range[0] or new_angle > angle_range[1]:
+        velocity = -velocity  # 反转方向
+        new_angle = current_angle + velocity
+    return new_angle, velocity
 
-def run_laser_toy(pan_servo, tilt_servo, laser_pin, pan_range=(40, 140), tilt_range=(80, 120), pause_range=(100, 300)):
-    laser_pin.value(1)  # 激活激光
-    current_pan = 90
-    current_tilt = 100
+def run_laser_toy(pan_servo, tilt_servo, laser_pin, pan_range=(40, 140), tilt_range=(80, 120)):
+    laser_pin.value(1)
+    
+    pan_angle, tilt_angle = 90, 100  # 初始角度
+    pan_velocity, tilt_velocity = 2, 2  # 初始速度
 
     while True:
-        pan_target = current_pan + urandom.randint(-20, 20)  # 限制平移位移距离
-        tilt_target = current_tilt + urandom.randint(-20, 20)  # 限制倾斜位移距离
+        pan_angle, pan_velocity = calculate_new_angle(pan_angle, pan_velocity + urandom.uniform(-1, 1), pan_range)
+        tilt_angle, tilt_velocity = calculate_new_angle(tilt_angle, tilt_velocity + urandom.uniform(-1, 1), tilt_range)
         
-        # 确保目标角度在有效范围内
-        pan_target = max(min(pan_target, pan_range[1]), pan_range[0])
-        tilt_target = max(min(tilt_target, tilt_range[1]), tilt_range[0])
+        set_servo_angle(pan_servo, pan_angle)
+        set_servo_angle(tilt_servo, tilt_angle)
         
-        # 平滑移动到目标角度
-        smooth_move(pan_servo, current_pan, pan_target)
-        smooth_move(tilt_servo, current_tilt, tilt_target)
-        
-        # 更新当前角度
-        current_pan = pan_target
-        current_tilt = tilt_target
-        
-        # 随机暂停时间
-        pause_time = urandom.randint(*pause_range) / 1000.0
-        sleep(pause_time)
+        sleep(0.05)  # 短暂延时以实现更平滑的运动
 
 # 定义引脚
 PAN, TILT, LASER = 10, 11, 2
@@ -49,5 +39,4 @@ pan_servo = init_servo(PAN)
 tilt_servo = init_servo(TILT)
 laser = Pin(LASER, Pin.OUT)
 
-# 运行逗猫玩具
 run_laser_toy(pan_servo, tilt_servo, laser)
